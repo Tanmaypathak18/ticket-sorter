@@ -1,0 +1,18 @@
+{
+  "about": "The problems the sorter puts tickets into, in plain words, with the cheapest fix level that might fit. Fix ideas are ideas to test, not facts about how any company works today.",
+  "fix_levels": {
+    "process": "A written process or agent reply. Can start this week.",
+    "feature": "A change to something that already exists, like a message or a screen.",
+    "build": "A new build. Only worth it once the cheaper levels are tried."
+  },
+  "categories": [
+    {"id": "attendance", "name": "Penalized for attendance", "plain": "Points, restriction or a no-show mark after canceling, calling off or being late.", "fix_level": "process", "fix_idea": "One agent reply that says plainly what can be excused and what proof works, or that nothing can. Then add the restriction end date and what the worker can still do to the restriction message."},
+    {"id": "facility_report", "name": "Facility report or Do Not Return", "plain": "Blocked or removed after a facility complained or marked them Do Not Return.", "fix_level": "process", "fix_idea": "Before a facility report leads to removal beyond that one workplace, an agent records the worker's side."},
+    {"id": "removed_no_reason", "name": "Removed, no clear reason", "plain": "Account restricted, suspended or deactivated, and the worker says they were not told why.", "fix_level": "feature", "fix_idea": "Every removal message names the reason category, or says plainly that it can't be shared and why, and says what happens next."},
+    {"id": "documents", "name": "Documents or background check", "plain": "Blocked over a license, TB test, vaccine, background check or other document.", "fix_level": "process", "fix_idea": "One reply that names the document, what is wrong with it, how to fix it and how long review takes."},
+    {"id": "facility_canceled", "name": "Facility canceled or sent home", "plain": "The facility canceled the shift or sent the worker home, and they lost pay or time.", "fix_level": "feature", "fix_idea": "When a shift is canceled, tell the worker right away whether they qualify for cancellation pay and why."},
+    {"id": "pay_problem", "name": "Pay late, wrong or missing", "plain": "Pay that is late, short, missing or stuck in verification.", "fix_level": "feature", "fix_idea": "Show the worker where a payment is stuck (waiting on a signature, verification or the payment processor) and when it should clear."},
+    {"id": "app_problem", "name": "App problem", "plain": "The app failed, glitched or tracked location in a way that caused a problem.", "fix_level": "build", "fix_idea": "Send the most repeated app problems to the product team with counts and example tickets."},
+    {"id": "other", "name": "Other", "plain": "Anything the rules did not match. Read these by hand.", "fix_level": "process", "fix_idea": "Read a sample by hand. If a new pattern shows up, add a category."}
+  ]
+}

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket Sorter</title>
+  <meta name="description" content="Sorts support tickets into plain problem types and shows the biggest problem. Runs in your browser.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="page-header">
+    <h1>Ticket Sorter</h1>
+    <p>See what support tickets are really about, which problem is biggest, and the cheapest way to fix it.</p>
+  </header>
+
+  <main>
+    <section class="step" id="step-load" aria-labelledby="step-load-title">
+      <h2 id="step-load-title"><span class="step-number">Step 1</span> Load tickets</h2>
+      <button type="button" id="load-sample">Try it with sample data</button>
+
+      <div class="upload">
+        <label for="csv-file">Upload your own CSV</label>
+        <input type="file" id="csv-file" accept=".csv,text/csv">
+        <p class="note">Your file never leaves this browser. Nothing is uploaded or stored.</p>
+        <p class="note"><a href="data/ticket_export_template.csv" download>Download the CSV template</a> to see the expected format.</p>
+      </div>
+
+      <form class="picker" id="column-picker" hidden>
+        <fieldset>
+          <legend>Which columns hold the ticket text?</legend>
+          <div id="text-columns"></div>
+        </fieldset>
+        <div class="field">
+          <label for="date-column">Date column (optional)</label>
+          <select id="date-column"></select>
+        </div>
+        <div class="field">
+          <label for="worker-column">Worker ID column (optional)</label>
+          <select id="worker-column"></select>
+        </div>
+        <button type="submit">Sort these tickets</button>
+        <p class="status error" id="picker-error" role="alert"></p>
+      </form>
+
+      <p class="banner" id="sample-banner" hidden>Sample data: public reviews from Indeed, BBB, Trustpilot and app stores, summarized. These are reviews, not real support tickets.</p>
+      <p class="status" id="load-status" role="status"></p>
+      <p class="note" id="load-notes" hidden></p>
+    </section>
+
+    <section class="step" id="step-answer" aria-labelledby="step-answer-title">
+      <h2 id="step-answer-title"><span class="step-number">Step 2</span> See the answer</h2>
+      <p class="empty" id="answer-empty">Load tickets to see the answer here.</p>
+      <div id="answer" hidden>
+        <p class="headline" id="headline" aria-live="polite"></p>
+        <h3>Problems, biggest first</h3>
+        <ol class="problems" id="problem-list"></ol>
+        <h3>Also in these tickets</h3>
+        <div class="flags" id="flag-list"></div>
+        <div id="period" hidden>
+          <h3>Before and after</h3>
+          <div class="field">
+            <label for="cutoff">Compare tickets before and after this date</label>
+            <input type="date" id="cutoff">
+          </div>
+          <p class="note" id="period-note"></p>
+          <div class="table-scroll">
+            <table class="period-table" aria-label="Share of tickets for each problem, before and after the date">
+              <thead>
+                <tr>
+                  <th scope="col">Problem</th>
+                  <th scope="col" class="number">Before</th>
+                  <th scope="col" class="number">After</th>
+                  <th scope="col">Change</th>
+                </tr>
+              </thead>
+              <tbody id="period-rows"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" id="step-check" aria-labelledby="step-check-title">
+      <h2 id="step-check-title"><span class="step-number">Step 3</span> Check and fix the sorting</h2>
+      <p class="empty" id="check-empty">Load tickets to check them here.</p>
+      <div id="check" hidden>
+        <p class="agreement" id="agreement" hidden></p>
+        <div class="check-tools">
+          <div class="field">
+            <label for="problem-filter">Show</label>
+            <select id="problem-filter"></select>
+          </div>
+          <div class="field">
+            <label for="ticket-search">Search the ticket text</label>
+            <input type="search" id="ticket-search">
+          </div>
+        </div>
+        <p class="note" id="table-count" role="status"></p>
+        <table class="ticket-table" aria-label="Tickets with their problem and flags">
+          <thead>
+            <tr>
+              <th scope="col">Ticket</th>
+              <th scope="col">Problem</th>
+              <th scope="col">Flags</th>
+            </tr>
+          </thead>
+          <tbody id="ticket-rows"></tbody>
+        </table>
+        <div class="table-actions">
+          <button type="button" class="secondary" id="show-more" hidden>Show more</button>
+          <button type="button" id="download-csv">Download sorted CSV</button>
+        </div>
+        <p class="status error" id="download-error" role="alert"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <p>Built by Tanmay Pathak as a demo. Sample data is public reviews, summarized.</p>
+    <p><a href="https://github.com/Tanmaypathak18/ticket-sorter">See the code on GitHub</a></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
