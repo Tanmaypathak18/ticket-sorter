@@ -1,0 +1,7 @@
+{
+  "tickets": [
+    {"id": 1, "subject": "Points after calling off", "description": "I called off sick and got points", "created_at": "2026-03-02", "requester": {"id": 7, "name": "Test worker"}},
+    {"id": 2, "subject": "Pay missing", "description": "I was not paid for my shift", "created_at": "2026-03-05", "requester": {"id": 7, "name": "Test worker"}, "tags": ["pay", "urgent"]},
+    {"id": 3, "subject": "Do not return", "description": "The facility marked me DNR", "created_at": "2026-03-10", "requester": {"id": 12, "name": "Another worker"}}
+  ]
+}

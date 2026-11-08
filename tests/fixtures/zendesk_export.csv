@@ -1,0 +1,9 @@
+Id,Subject,Description,Created at,Requester id
+1001,Points after calling off,I called off sick and got points on my account,2026-03-02,7
+1002,Pay missing,I was not paid for my Saturday shift,2026-03-05,7
+1003,Still not paid,Payment for Saturday is still missing,2026-03-08,7
+1004,Do not return,The facility marked me DNR with no reason,2026-03-10,12
+1005,Shift canceled,The facility canceled my shift and I was sent home,2026-04-14,15
+1006,License check,My license document is stuck in review,2026-05-20,18
+1007,App glitch,The app shows a blank screen when I clock in,2026-06-01,21
+1008,Account question,Can you help me change my phone number,2026-06-03,24

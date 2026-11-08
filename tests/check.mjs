@@ -11,6 +11,15 @@ import {
   countOverTime,
   isSampleComplaint,
 } from '../js/sorter.js';
+import {
+  TEMPLATE_FIELDS,
+  guessMapping,
+  hasTicketText,
+  cellText,
+  recordsFromJson,
+  tableFromRecords,
+  toTemplateRows,
+} from '../js/converter.js';
 
 const MIN_AGREEMENT = 70;
 
@@ -124,6 +133,51 @@ tests.push(
   ['Longer ranges count by quarter', quarterly.unit === 'quarter'
     && quarterly.periods.length === 19 && quarterly.periods[0].start === day('2022-01-01')],
   ['No dates means nothing over time', over([['', 'a']]).periods.length === 0],
+);
+
+const readText = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
+const headerOf = (path) => readText(path).split('\n')[0].split(',');
+const noneMapped = Object.fromEntries(TEMPLATE_FIELDS.map((field) => [field, '']));
+const zendesk = guessMapping(headerOf('fixtures/zendesk_export.csv'));
+const jsonTable = tableFromRecords(recordsFromJson(JSON.parse(readText('fixtures/tickets.json'))).records);
+const jsonMapping = guessMapping(jsonTable.columns);
+const unknown = guessMapping(headerOf('fixtures/no_known_headers.csv'));
+const sampleMapping = guessMapping(headerOf('../data/sample_reviews.csv'));
+
+tests.push(
+  ['Converter: Zendesk headers map all five fields', sameList(zendesk, {
+    ticket_id: 'Id', created_at: 'Created at', worker_id: 'Requester id', subject: 'Subject', description: 'Description',
+  })],
+  ['Converter: JSON maps id, subject and requester.id',
+    jsonMapping.ticket_id === 'id' && jsonMapping.subject === 'subject' && jsonMapping.worker_id === 'requester.id'],
+  ['Converter: JSON flattens one level', jsonTable.rows[0]['requester.id'] === '7' && jsonTable.rows[0]['requester.name'] === 'Test worker'],
+  ['Converter: JSON keeps columns in first-seen order', jsonTable.columns.join() === 'id,subject,description,created_at,requester.id,requester.name,tags'],
+  ['Converter: lists become text', jsonTable.rows[1].tags === 'pay, urgent' && jsonTable.rows[0].tags === undefined],
+  ['Converter: unknown headers map to none', sameList(unknown, noneMapped) && !hasTicketText(unknown)],
+  ['Converter: sample file maps id, date and text',
+    sampleMapping.ticket_id === 'id' && sampleMapping.created_at === 'date' && sampleMapping.description === 'text'],
+  ['Converter: ignores case, spaces, underscores, dots and hyphens',
+    guessMapping(['TICKET_NUMBER', 'Created-At', 'requester.external_id', 'Body']).ticket_id === 'TICKET_NUMBER'
+    && guessMapping(['Created-At']).created_at === 'Created-At'
+    && guessMapping(['requester.external_id']).worker_id === 'requester.external_id'],
+  ['Converter: blank columns are not guessed', sameList(
+    guessMapping(['ticket_id', 'worker_id', 'subject'], [{ ticket_id: '1', worker_id: '', subject: 'Late' }, { ticket_id: '2', worker_id: ' ', subject: 'Pay' }]),
+    { ticket_id: 'ticket_id', created_at: '', worker_id: '', subject: 'subject', description: '' },
+  )],
+  ['Converter: earlier names in the list win', guessMapping(['text', 'details']).description === 'details'],
+  ['Converter: subject alone is enough', hasTicketText({ subject: 'Title' }) && !hasTicketText({})],
+  ['Converter: JSON object with one list is read', recordsFromJson({ tickets: [{ id: 1 }] }).records.length === 1],
+  ['Converter: JSON array is read', recordsFromJson([{ id: 1 }, { id: 2 }]).records.length === 2],
+  ['Converter: JSON with two lists asks for one', Boolean(recordsFromJson({ a: [], b: [] }).error)],
+  ['Converter: JSON list of plain values is refused', Boolean(recordsFromJson([1, 2]).error)],
+  ['Converter: deeper objects stay as text', tableFromRecords([{ a: { b: { c: 1 } } }]).rows[0]['a.b'] === '{"c":1}'],
+  ['Converter: spreadsheet dates keep their day',
+    cellText(new Date(Date.UTC(2026, 2, 31))) === '2026-03-31' && cellText(new Date(2026, 2, 31)) === '2026-03-31'],
+  ['Converter: blanks stay blank', cellText(null) === '' && cellText(undefined) === ''],
+  ['Converter: template rows use the mapping', sameList(
+    toTemplateRows([{ Id: 5, Title: 'Late', Extra: 'x' }], { ticket_id: 'Id', subject: 'Title' }),
+    [{ ticket_id: '5', created_at: '', worker_id: '', subject: 'Late', description: '' }],
+  )],
 );
 
 console.log('Matching tests');

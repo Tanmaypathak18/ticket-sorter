@@ -50,35 +50,69 @@
 
         <div class="card option">
           <h3>Use your own tickets</h3>
-          <input type="file" id="csv-file" class="file-input" accept=".csv,text/csv">
+          <input type="file" id="csv-file" class="file-input" accept=".csv,.xlsx,.xls,.json,text/csv,application/json">
           <label class="dropzone" for="csv-file" id="dropzone">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4"></path><path d="m7 9 5-5 5 5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
-            <span class="dropzone-title">Upload your own CSV</span>
-            <span class="dropzone-hint" id="dropzone-hint">Drop a file here, or click to choose one</span>
+            <span class="dropzone-title">Upload your own file</span>
+            <span class="dropzone-hint" id="dropzone-hint">CSV, Excel or JSON. Drop it here, or click to choose one.</span>
           </label>
           <p class="note">Your file never leaves this browser. Nothing is uploaded or stored.</p>
           <p class="note"><a href="data/ticket_export_template.csv" download>Download the CSV template</a> to see the expected format.</p>
         </div>
       </div>
 
-      <form class="card picker" id="column-picker" hidden>
-        <h3>Pick the columns</h3>
-        <fieldset>
-          <legend>Which columns hold the ticket text?</legend>
-          <div class="checkbox-grid" id="text-columns"></div>
-        </fieldset>
-        <div class="picker-selects">
+      <form class="card converter" id="converter" hidden>
+        <h3>Match your columns</h3>
+        <p class="card-sub">We matched your columns below. Change any that look wrong.</p>
+        <p class="note">Your file never leaves this browser.</p>
+        <p class="note" id="converter-source"></p>
+        <p class="converter-warning" id="converter-warning" hidden>We could not match your columns. Pick a subject or description column to continue.</p>
+
+        <div class="mapping-grid">
           <div class="field">
-            <label for="date-column">Date column (optional)</label>
-            <select id="date-column"></select>
+            <label for="map-ticket_id">Ticket ID <span class="field-name">ticket_id</span></label>
+            <select id="map-ticket_id" data-field="ticket_id"></select>
           </div>
           <div class="field">
-            <label for="worker-column">Worker ID column (optional)</label>
-            <select id="worker-column"></select>
+            <label for="map-created_at">Date created <span class="field-name">created_at</span></label>
+            <select id="map-created_at" data-field="created_at"></select>
+          </div>
+          <div class="field">
+            <label for="map-worker_id">Worker ID <span class="field-name">worker_id</span></label>
+            <select id="map-worker_id" data-field="worker_id"></select>
+          </div>
+          <div class="field">
+            <label for="map-subject">Subject <span class="field-name">subject</span></label>
+            <select id="map-subject" data-field="subject"></select>
+          </div>
+          <div class="field">
+            <label for="map-description">Description <span class="field-name">description</span></label>
+            <select id="map-description" data-field="description"></select>
           </div>
         </div>
-        <button type="submit" class="button primary">Sort these tickets</button>
-        <p class="status error" id="picker-error" role="alert"></p>
+        <p class="note">Only one of subject or description is needed. The date and worker ID unlock the charts over time and repeat contacts.</p>
+
+        <h4 class="preview-title">Preview of the first 5 rows</h4>
+        <div class="table-scroll preview-scroll">
+          <table class="data-table preview-table" aria-label="First 5 rows in the template format">
+            <thead>
+              <tr>
+                <th scope="col">ticket_id</th>
+                <th scope="col">created_at</th>
+                <th scope="col">worker_id</th>
+                <th scope="col">subject</th>
+                <th scope="col">description</th>
+              </tr>
+            </thead>
+            <tbody id="preview-rows"></tbody>
+          </table>
+        </div>
+
+        <div class="converter-actions">
+          <button type="submit" class="button primary">Sort these tickets</button>
+          <button type="button" class="button secondary" id="download-template">Download as template CSV</button>
+        </div>
+        <p class="status error" id="converter-error" role="alert"></p>
       </form>
 
       <div class="load-result">

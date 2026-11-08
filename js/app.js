@@ -9,6 +9,15 @@ import {
   countOverTime,
   isSampleComplaint,
 } from './sorter.js';
+import {
+  TEMPLATE_FIELDS,
+  guessMapping,
+  hasTicketText,
+  cellText,
+  recordsFromJson,
+  tableFromRecords,
+  toTemplateRows,
+} from './converter.js';
 
 const FIX_LEVEL_LABELS = {
   process: 'Written process',
@@ -36,9 +45,10 @@ const OTHER = 'other';
 const TICKETS_PER_PAGE = 50;
 const SVG = 'http://www.w3.org/2000/svg';
 
-const LIKELY_TEXT_COLUMNS = ['subject', 'description', 'text'];
-const LIKELY_DATE_COLUMNS = ['created_at', 'date'];
-const LIKELY_WORKER_COLUMNS = ['worker_id'];
+const PREVIEW_ROWS = 5;
+const SHEETJS_URL = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+const SHEETJS_INTEGRITY = 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT';
+const DROPZONE_HINT = 'CSV, Excel or JSON. Drop it here, or click to choose one.';
 
 const state = {
   tickets: [],
@@ -58,11 +68,13 @@ const loadButton = document.getElementById('load-sample');
 const csvFile = document.getElementById('csv-file');
 const dropzone = document.getElementById('dropzone');
 const dropzoneHint = document.getElementById('dropzone-hint');
-const columnPicker = document.getElementById('column-picker');
-const textColumns = document.getElementById('text-columns');
-const dateColumn = document.getElementById('date-column');
-const workerColumn = document.getElementById('worker-column');
-const pickerError = document.getElementById('picker-error');
+const converter = document.getElementById('converter');
+const converterSource = document.getElementById('converter-source');
+const converterWarning = document.getElementById('converter-warning');
+const mappingSelects = [...converter.querySelectorAll('select[data-field]')];
+const previewRows = document.getElementById('preview-rows');
+const downloadTemplateButton = document.getElementById('download-template');
+const converterError = document.getElementById('converter-error');
 const sampleBanner = document.getElementById('sample-banner');
 const sampleSummary = document.getElementById('sample-summary');
 const sampleBreakdown = document.getElementById('sample-breakdown');
@@ -741,20 +753,24 @@ function sortedCsv() {
   return window.Papa.unparse({ fields, data }, { escapeFormulae: true });
 }
 
+function saveCsv(csv, fileName) {
+  // The mark at the start tells Excel the file is UTF-8.
+  const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function downloadCsv() {
   if (!window.Papa) {
     downloadError.textContent = 'The CSV writer did not load. Check your connection and refresh the page.';
     return;
   }
   downloadError.textContent = '';
-  // The mark at the start tells Excel the file is UTF-8.
-  const blob = new Blob(['﻿', sortedCsv()], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'sorted-tickets.csv';
-  link.click();
-  URL.revokeObjectURL(url);
+  saveCsv(sortedCsv(), 'sorted-tickets.csv');
 }
 
 // Loading
@@ -846,9 +862,9 @@ async function loadSample() {
   state.isLoading = true;
   showStatus('Loading…');
   showNotes('');
-  columnPicker.hidden = true;
+  converter.hidden = true;
   csvFile.value = '';
-  dropzoneHint.textContent = 'Drop a file here, or click to choose one';
+  dropzoneHint.textContent = DROPZONE_HINT;
   try {
     await loadSettings();
     const reviews = await fetchJson('data/sample_reviews.json');
@@ -873,65 +889,154 @@ async function loadSample() {
   }
 }
 
-function fillColumnSelect(select, fields, likely) {
-  const none = makeElement('option', '', 'None');
-  none.value = '';
-  const options = fields.map((field) => {
-    const option = makeElement('option', '', field);
-    option.value = field;
-    return option;
-  });
-  select.replaceChildren(none, ...options);
-  select.value = fields.find((field) => likely.includes(field.toLowerCase())) ?? '';
+// Converter: any export into the template columns
+
+function currentMapping() {
+  return Object.fromEntries(mappingSelects.map((select) => [select.dataset.field, select.value]));
 }
 
-function drawColumnPicker(fields) {
-  textColumns.replaceChildren(
-    ...fields.map((field) => {
-      const label = makeElement('label', 'checkbox');
-      const box = document.createElement('input');
-      box.type = 'checkbox';
-      box.value = field;
-      box.checked = LIKELY_TEXT_COLUMNS.includes(field.toLowerCase());
-      label.append(box, field);
-      return label;
+function drawPreview() {
+  const mapping = currentMapping();
+  converterWarning.hidden = hasTicketText(mapping);
+  converterError.textContent = '';
+  previewRows.replaceChildren(
+    ...toTemplateRows(state.upload.rows.slice(0, PREVIEW_ROWS), mapping).map((templateRow) => {
+      const row = document.createElement('tr');
+      for (const field of TEMPLATE_FIELDS) {
+        const cell = makeElement('td', '', templateRow[field]);
+        cell.title = templateRow[field];
+        row.append(cell);
+      }
+      return row;
     }),
   );
-  fillColumnSelect(dateColumn, fields, LIKELY_DATE_COLUMNS);
-  fillColumnSelect(workerColumn, fields, LIKELY_WORKER_COLUMNS);
-  pickerError.textContent = '';
-  columnPicker.hidden = false;
 }
 
-function handleParsedFile(results) {
-  const fields = results.meta.fields ?? [];
-  if (fields.length === 0 || results.data.length === 0) {
-    columnPicker.hidden = true;
+function drawConverter(sourceNote) {
+  const { columns } = state.upload;
+  const guess = guessMapping(columns, state.upload.rows);
+  for (const select of mappingSelects) {
+    const none = makeElement('option', '', 'None');
+    none.value = '';
+    select.replaceChildren(
+      none,
+      ...columns.map((column) => {
+        const option = makeElement('option', '', column);
+        option.value = column;
+        return option;
+      }),
+    );
+    select.value = guess[select.dataset.field];
+  }
+  converterSource.textContent = sourceNote;
+  converter.hidden = false;
+  drawPreview();
+}
+
+// Every file type ends here, as rows of named columns.
+function useUploadedTable(rows, columns, sourceNote) {
+  if (columns.length === 0 || rows.length === 0) {
+    converter.hidden = true;
     showStatus('This file has no tickets in it. Check that it has a header row and at least one ticket.', true);
     return;
   }
-  state.upload = { rows: results.data, fields };
+
+  // The sample file holds every review, so it keeps the same rows as sample mode.
+  const isSampleFile = columns.includes('counted') && columns.includes('hand_label_detail');
+  const kept = isSampleFile ? rows.filter(isSampleComplaint) : rows;
+  state.upload = { rows: kept, allRows: rows, columns, isSampleFile };
+
   clearAnswer();
   sampleBanner.hidden = true;
-  showNotes('');
-  showStatus(`${plural(results.data.length, 'row', 'rows')} read. Now pick the columns.`);
-  drawColumnPicker(fields);
+  showStatus(`${plural(kept.length, 'ticket', 'tickets')} read. Check the matched columns.`);
+  showNotes(isSampleFile
+    ? `This is the sample file, so only the ${kept.length} of ${rows.length} reviews that describe a problem are kept.`
+    : '');
+  drawConverter(sourceNote);
 }
 
-// Papa Parse reads the file here in the browser. Nothing is sent anywhere.
-function readFile(file) {
-  if (!file) return;
+function readCsv(file) {
   if (!window.Papa) {
     showStatus('The CSV reader did not load. Check your connection and refresh the page.', true);
     return;
   }
-  dropzoneHint.textContent = file.name;
   window.Papa.parse(file, {
     header: true,
     skipEmptyLines: 'greedy',
-    complete: handleParsedFile,
+    complete: (results) => useUploadedTable(results.data, results.meta.fields ?? [], `Read ${file.name} as a CSV file.`),
     error: () => showStatus('Could not read this file. Check that it is a CSV.', true),
   });
+}
+
+async function readJson(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    showStatus('Could not read this file. Check that it is valid JSON.', true);
+    return;
+  }
+  const { records, error } = recordsFromJson(data);
+  if (error) {
+    showStatus(error, true);
+    return;
+  }
+  const { rows, columns } = tableFromRecords(records);
+  useUploadedTable(rows, columns, `Read ${file.name} as JSON. Fields inside a field, like requester.id, are shown as their own columns.`);
+}
+
+// SheetJS loads only when someone picks an Excel file. The hash makes the browser refuse a changed copy.
+function loadSheetJs() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = SHEETJS_URL;
+    script.integrity = SHEETJS_INTEGRITY;
+    script.crossOrigin = 'anonymous';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.append(script);
+  });
+}
+
+async function readExcel(file) {
+  showStatus('Reading the Excel file…');
+  try {
+    await loadSheetJs();
+  } catch {
+    showStatus('The Excel reader did not load. Check your connection and refresh the page.', true);
+    return;
+  }
+  let workbook;
+  try {
+    workbook = window.XLSX.read(await file.arrayBuffer(), { cellDates: true });
+  } catch {
+    showStatus('Could not read this file. Check that it is an Excel file.', true);
+    return;
+  }
+  const [sheetName] = workbook.SheetNames;
+  const records = window.XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '', raw: true });
+  const rows = records.map((record) =>
+    Object.fromEntries(Object.entries(record).map(([column, value]) => [column, cellText(value)])),
+  );
+  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const others = workbook.SheetNames.length - 1;
+  useUploadedTable(
+    rows,
+    columns,
+    `Read the first sheet only: ${sheetName}.` + (others > 0 ? ` The other ${plural(others, 'sheet was', 'sheets were')} left out.` : ''),
+  );
+}
+
+// The file is read here in the browser. Nothing is sent anywhere.
+function readFile(file) {
+  if (!file) return;
+  dropzoneHint.textContent = file.name;
+  converterError.textContent = '';
+  const extension = file.name.split('.').pop().toLowerCase();
+  if (extension === 'xlsx' || extension === 'xls') readExcel(file);
+  else if (extension === 'json') readJson(file);
+  else readCsv(file);
 }
 
 function handleDrop(event) {
@@ -945,19 +1050,15 @@ function handleDragOver(event) {
   dropzone.classList.add('is-dragging');
 }
 
+function checkMapping() {
+  if (hasTicketText(currentMapping())) return true;
+  converterError.textContent = 'Pick a subject or description column first.';
+  return false;
+}
+
 async function sortUpload(event) {
   event.preventDefault();
-  const picked = {
-    textColumns: [...textColumns.querySelectorAll('input:checked')].map(({ value }) => value),
-    dateColumn: dateColumn.value,
-    workerColumn: workerColumn.value,
-    isSample: false,
-  };
-  if (picked.textColumns.length === 0) {
-    pickerError.textContent = 'Pick at least one column with ticket text.';
-    return;
-  }
-  pickerError.textContent = '';
+  if (!checkMapping()) return;
 
   try {
     await loadSettings();
@@ -967,19 +1068,36 @@ async function sortUpload(event) {
     return;
   }
 
-  // The sample CSV holds every review, so count the same rows as sample mode.
-  const { rows: allRows, fields } = state.upload;
-  const isSampleFile = fields.includes('counted') && fields.includes('hand_label_detail');
-  const rows = isSampleFile ? allRows.filter(isSampleComplaint) : allRows;
-
-  useTickets(rows, fields, picked);
+  const mapping = currentMapping();
+  const { rows, allRows, columns, isSampleFile } = state.upload;
+  useTickets(rows, columns, {
+    textColumns: [mapping.subject, mapping.description].filter(Boolean),
+    dateColumn: mapping.created_at,
+    workerColumn: mapping.worker_id,
+    isSample: false,
+  });
   if (isSampleFile) describeSample(allRows);
   sampleBanner.hidden = !isSampleFile;
   showStatus(`${plural(rows.length, 'ticket', 'tickets')} loaded`);
   const sampleNote = isSampleFile
     ? `This is the sample file, so only the ${rows.length} of ${allRows.length} reviews that describe a problem are counted. `
     : '';
-  showNotes(sampleNote + dateNotes(rows, picked.dateColumn));
+  showNotes(sampleNote + dateNotes(rows, mapping.created_at));
+  document.getElementById('step-answer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function downloadTemplate() {
+  if (!checkMapping()) return;
+  if (!window.Papa) {
+    converterError.textContent = 'The CSV writer did not load. Check your connection and refresh the page.';
+    return;
+  }
+  const templateRows = toTemplateRows(state.upload.rows, currentMapping());
+  const csv = window.Papa.unparse(
+    { fields: TEMPLATE_FIELDS, data: templateRows.map((row) => TEMPLATE_FIELDS.map((field) => row[field])) },
+    { escapeFormulae: true },
+  );
+  saveCsv(csv, 'tickets-template.csv');
 }
 
 function changeHighlight() {
@@ -1003,7 +1121,9 @@ csvFile.addEventListener('change', () => readFile(csvFile.files[0]));
 dropzone.addEventListener('dragover', handleDragOver);
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-dragging'));
 dropzone.addEventListener('drop', handleDrop);
-columnPicker.addEventListener('submit', sortUpload);
+converter.addEventListener('submit', sortUpload);
+mappingSelects.forEach((select) => select.addEventListener('change', drawPreview));
+downloadTemplateButton.addEventListener('click', downloadTemplate);
 timeHighlight.addEventListener('change', changeHighlight);
 cutoffInput.addEventListener('change', drawPeriod);
 problemFilter.addEventListener('change', resetTableAndDraw);

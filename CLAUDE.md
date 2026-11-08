@@ -3,12 +3,12 @@
 A static web page (GitHub Pages) that sorts support tickets into plain problem types with keyword rules, shows the biggest problem and suggests a fix level. Full plan: BUILD_PLAN.md. Build one phase per session.
 
 ## Rules
-- Plain HTML, CSS and JavaScript. No framework, no build step. The only outside script is Papa Parse 5.4.1 from jsDelivr.
-- All sorting logic lives in js/sorter.js as a plain ES module, so it runs in the browser and in `node tests/check.mjs`.
-- Never send ticket data anywhere. No analytics, no external requests besides Papa Parse.
+- Plain HTML, CSS and JavaScript. No framework, no build step. The only outside scripts are Papa Parse 5.4.1 from jsDelivr and SheetJS 0.20.3 from cdn.sheetjs.com. SheetJS loads only when an Excel file is picked, with an integrity hash.
+- All sorting logic lives in js/sorter.js and all converting logic in js/converter.js, as plain ES modules, so they run in the browser and in `node tests/check.mjs`.
+- Never send ticket data anywhere. No analytics, no external requests besides those two scripts.
 - Do not edit the data files, except data/rules.json, and only when a phase says so.
 - Do not tune rules.json to raise the sample agreement number.
-- Run `node tests/check.mjs` after any change to sorter.js or rules.json.
+- Run `node tests/check.mjs` after any change to sorter.js, converter.js or rules.json.
 - Show your plan before writing code. Keep changes small.
 
 ## Language on screen

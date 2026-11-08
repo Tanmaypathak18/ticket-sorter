@@ -8,13 +8,13 @@ A small web page that sorts support tickets about restrictions, removals, points
 
 ## How to use it
 
-1. **Load tickets.** Press "Try it with sample data", or upload your own CSV. Then pick the columns that hold the ticket text, and optionally the date and worker ID. The [template](data/ticket_export_template.csv) shows the expected format.
+1. **Load tickets.** Press "Try it with sample data", or upload your own CSV, Excel or JSON export. The page guesses which columns hold the ticket ID, date, worker ID, subject and description, shows a preview, and lets you change any guess. You can sort right away, or download your file in the [template](data/ticket_export_template.csv) format. Excel files are read from the first sheet only.
 2. **See the answer.** Read the biggest problem, the bars, the fix level and idea for each problem, and the flag counts. With a date column you also get a before and after view. With a date and a worker ID you also get repeat contacts.
 3. **Check and fix the sorting.** See the words that decided each ticket, move any ticket to another problem, and download the sorted CSV.
 
 ## Your data
 
-Everything runs in your browser. Your file is never uploaded or stored. The only outside script is [Papa Parse](https://www.papaparse.com/), which reads the CSV on your own device.
+Everything runs in your browser. Your file is never uploaded or stored. The only outside scripts are [Papa Parse](https://www.papaparse.com/), which reads CSV files, and [SheetJS](https://sheetjs.com/), which reads Excel files and loads only when you pick one. Both run on your own device.
 
 ## How the sorting works
 
