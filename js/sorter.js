@@ -5,6 +5,8 @@ const WORD_CHAR = '[\\p{L}\\p{N}]';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const REPEAT_DAYS = 7;
 const CHANGE_POINTS = 5;
+const WEEKLY_MAX_DAYS = 120;
+const MONTHLY_MAX_DAYS = 3 * 366;
 const MONTHS = [
   'january', 'february', 'march', 'april', 'may', 'june',
   'july', 'august', 'september', 'october', 'november', 'december',
@@ -170,6 +172,47 @@ export function compareShares(tickets, cutoff, problemIds) {
     return { id, before: beforeShare, after: afterShare, trend };
   });
   return { beforeTotal: before.length, afterTotal: after.length, rows };
+}
+
+function periodStart(ms, unit) {
+  const date = new Date(ms);
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  if (unit === 'week') return ms - ((date.getUTCDay() + 6) % 7) * DAY_MS;
+  if (unit === 'month') return Date.UTC(year, month, 1);
+  return Date.UTC(year, month - (month % 3), 1);
+}
+
+function nextPeriod(ms, unit) {
+  const date = new Date(ms);
+  if (unit === 'week') return ms + 7 * DAY_MS;
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + (unit === 'month' ? 1 : 3), 1);
+}
+
+// Tickets per week, month or quarter, picked from the date range, with empty periods kept.
+// Each period also counts the tickets in one highlighted problem. Undated tickets are left out.
+export function countOverTime(tickets, highlightId) {
+  const dated = tickets.filter(({ date }) => date !== null);
+  if (dated.length === 0) return { unit: null, periods: [] };
+
+  const first = dated.reduce((min, { date }) => Math.min(min, date), Infinity);
+  const last = dated.reduce((max, { date }) => Math.max(max, date), -Infinity);
+  const spanDays = (last - first) / DAY_MS;
+  const unit = spanDays <= WEEKLY_MAX_DAYS ? 'week' : spanDays <= MONTHLY_MAX_DAYS ? 'month' : 'quarter';
+
+  const periods = [];
+  const byStart = new Map();
+  for (let start = periodStart(first, unit); start <= last; start = nextPeriod(start, unit)) {
+    const period = { start, total: 0, highlighted: 0 };
+    periods.push(period);
+    byStart.set(start, period);
+  }
+  for (const { date, problem } of dated) {
+    const period = byStart.get(periodStart(date, unit));
+    period.total += 1;
+    if (problem === highlightId) period.highlighted += 1;
+  }
+  return { unit, periods };
 }
 
 // Sample mode counts only the reviews that describe a problem.

@@ -8,6 +8,7 @@ import {
   parseDate,
   markRepeatContacts,
   compareShares,
+  countOverTime,
   isSampleComplaint,
 } from '../js/sorter.js';
 
@@ -106,6 +107,23 @@ tests.push(
   ['Up by 5 points or more', shares.rows[1].trend === 'up'],
   ['Under 5 points is about the same', shares.rows[2].trend === 'same'
     && compareShares([{ problem: 'a', date: 0 }, { problem: 'a', date: 2 }], 1, ['a']).rows[0].trend === 'same'],
+);
+
+const over = (dates, highlight = 'a') =>
+  countOverTime(dates.map(([date, problem]) => ({ date: day(date), problem })), highlight);
+const weekly = over([['2026-03-04', 'a'], ['2026-03-05', 'b'], ['2026-03-18', 'a'], ['', 'a']]);
+const monthly = over([['2026-01-15', 'a'], ['2026-12-02', 'b']]);
+const quarterly = over([['2022-02-01', 'a'], ['2026-09-25', 'a']]);
+
+tests.push(
+  ['Short ranges count by week, from Monday', weekly.unit === 'week'
+    && sameList(weekly.periods.map(({ start, total, highlighted }) => [start, total, highlighted]),
+      [[day('2026-03-02'), 2, 1], [day('2026-03-09'), 0, 0], [day('2026-03-16'), 1, 1]])],
+  ['Ranges up to 3 years count by month, keeping empty months', monthly.unit === 'month'
+    && sameList(monthly.periods.map(({ total }) => total), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1])],
+  ['Longer ranges count by quarter', quarterly.unit === 'quarter'
+    && quarterly.periods.length === 19 && quarterly.periods[0].start === day('2022-01-01')],
+  ['No dates means nothing over time', over([['', 'a']]).periods.length === 0],
 );
 
 console.log('Matching tests');

@@ -9,84 +9,216 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <header class="page-header">
-    <h1>Ticket Sorter</h1>
-    <p>See what support tickets are really about, which problem is biggest, and the cheapest way to fix it.</p>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="3.2" rx="1.6"></rect>
+          <rect x="3" y="10.4" width="12" height="3.2" rx="1.6"></rect>
+          <rect x="3" y="16.8" width="7" height="3.2" rx="1.6"></rect>
+        </svg>
+        Ticket Sorter
+      </a>
+      <p class="topbar-note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3"></path><rect x="5" y="10" width="14" height="10" rx="2"></rect></svg>
+        Runs in your browser. Nothing is stored.
+      </p>
+    </div>
   </header>
 
-  <main>
-    <section class="step" id="step-load" aria-labelledby="step-load-title">
-      <h2 id="step-load-title"><span class="step-number">Step 1</span> Load tickets</h2>
-      <button type="button" id="load-sample">Try it with sample data</button>
+  <main class="page">
+    <section class="intro">
+      <h1>See what your support tickets are really about</h1>
+      <p>Sort tickets into plain problem types, find the biggest one, and see the cheapest way to fix it.</p>
+    </section>
 
-      <div class="upload">
-        <label for="csv-file">Upload your own CSV</label>
-        <input type="file" id="csv-file" accept=".csv,text/csv">
-        <p class="note">Your file never leaves this browser. Nothing is uploaded or stored.</p>
-        <p class="note"><a href="data/ticket_export_template.csv" download>Download the CSV template</a> to see the expected format.</p>
+    <section class="step" id="step-load" aria-labelledby="step-load-title">
+      <header class="step-header">
+        <span class="step-badge" aria-hidden="true">1</span>
+        <div>
+          <h2 id="step-load-title"><span class="visually-hidden">Step 1: </span>Load tickets</h2>
+          <p class="step-sub">Start with the sample, or use your own export.</p>
+        </div>
+      </header>
+
+      <div class="load-grid">
+        <div class="card option">
+          <h3>Try the sample</h3>
+          <p class="card-sub">163 public worker reviews that describe a problem, summarized.</p>
+          <button type="button" class="button primary" id="load-sample">Try it with sample data</button>
+        </div>
+
+        <div class="card option">
+          <h3>Use your own tickets</h3>
+          <input type="file" id="csv-file" class="file-input" accept=".csv,text/csv">
+          <label class="dropzone" for="csv-file" id="dropzone">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4"></path><path d="m7 9 5-5 5 5"></path><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg>
+            <span class="dropzone-title">Upload your own CSV</span>
+            <span class="dropzone-hint" id="dropzone-hint">Drop a file here, or click to choose one</span>
+          </label>
+          <p class="note">Your file never leaves this browser. Nothing is uploaded or stored.</p>
+          <p class="note"><a href="data/ticket_export_template.csv" download>Download the CSV template</a> to see the expected format.</p>
+        </div>
       </div>
 
-      <form class="picker" id="column-picker" hidden>
+      <form class="card picker" id="column-picker" hidden>
+        <h3>Pick the columns</h3>
         <fieldset>
           <legend>Which columns hold the ticket text?</legend>
-          <div id="text-columns"></div>
+          <div class="checkbox-grid" id="text-columns"></div>
         </fieldset>
-        <div class="field">
-          <label for="date-column">Date column (optional)</label>
-          <select id="date-column"></select>
+        <div class="picker-selects">
+          <div class="field">
+            <label for="date-column">Date column (optional)</label>
+            <select id="date-column"></select>
+          </div>
+          <div class="field">
+            <label for="worker-column">Worker ID column (optional)</label>
+            <select id="worker-column"></select>
+          </div>
         </div>
-        <div class="field">
-          <label for="worker-column">Worker ID column (optional)</label>
-          <select id="worker-column"></select>
-        </div>
-        <button type="submit">Sort these tickets</button>
+        <button type="submit" class="button primary">Sort these tickets</button>
         <p class="status error" id="picker-error" role="alert"></p>
       </form>
 
-      <p class="banner" id="sample-banner" hidden>Sample data: public reviews from Indeed, BBB, Trustpilot and app stores, summarized. These are reviews, not real support tickets.</p>
-      <p class="status" id="load-status" role="status"></p>
-      <p class="note" id="load-notes" hidden></p>
+      <div class="load-result">
+        <div class="banner" id="sample-banner" hidden>
+          <p id="sample-summary"></p>
+          <p>These are reviews, summarized, not real support tickets.</p>
+          <details class="left-out">
+            <summary>What was left out</summary>
+            <ul id="sample-breakdown"></ul>
+          </details>
+        </div>
+        <p class="status" id="load-status" role="status"></p>
+        <p class="note" id="load-notes" hidden></p>
+      </div>
     </section>
 
     <section class="step" id="step-answer" aria-labelledby="step-answer-title">
-      <h2 id="step-answer-title"><span class="step-number">Step 2</span> See the answer</h2>
-      <p class="empty" id="answer-empty">Load tickets to see the answer here.</p>
+      <header class="step-header">
+        <span class="step-badge" aria-hidden="true">2</span>
+        <div>
+          <h2 id="step-answer-title"><span class="visually-hidden">Step 2: </span>See the answer</h2>
+          <p class="step-sub">The biggest problem, and where to start fixing it.</p>
+        </div>
+      </header>
+
+      <p class="empty-state" id="answer-empty">Load tickets to see the answer here.</p>
+
       <div id="answer" hidden>
         <p class="headline" id="headline" aria-live="polite"></p>
-        <h3>Problems, biggest first</h3>
-        <ol class="problems" id="problem-list"></ol>
-        <h3>Also in these tickets</h3>
-        <div class="flags" id="flag-list"></div>
-        <div id="period" hidden>
-          <h3>Before and after</h3>
-          <div class="field">
-            <label for="cutoff">Compare tickets before and after this date</label>
-            <input type="date" id="cutoff">
+        <div class="stats" id="stat-row"></div>
+
+        <div class="answer-grid">
+          <div class="card">
+            <div class="card-head">
+              <h3>Problems, biggest first</h3>
+              <p class="card-sub">Number and share of tickets, with the cheapest fix that might work.</p>
+            </div>
+            <ol class="problems" id="problem-list"></ol>
           </div>
+
+          <div class="side">
+            <div class="card">
+              <div class="card-head">
+                <h3>How the fixes split</h3>
+                <p class="card-sub">Tickets by the cheapest fix level for their problem.</p>
+              </div>
+              <div id="fix-chart"></div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <h3>Also in these tickets</h3>
+              </div>
+              <div class="flags" id="flag-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card chart-card" id="time-card" hidden>
+          <div class="card-head card-head-row">
+            <div>
+              <h3>Tickets over time</h3>
+              <p class="card-sub" id="time-sub"></p>
+            </div>
+            <div class="field inline-field">
+              <label for="time-highlight">Highlight</label>
+              <select id="time-highlight"></select>
+            </div>
+          </div>
+          <div class="legend" id="time-legend"></div>
+          <div class="time-chart" id="time-chart">
+            <div class="tooltip" id="time-tooltip" hidden></div>
+          </div>
+          <details class="numbers">
+            <summary>Show the numbers</summary>
+            <div class="table-scroll">
+              <table class="data-table" aria-label="Tickets in each period">
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col" class="number">All tickets</th>
+                    <th scope="col" class="number" id="time-table-highlight">Highlighted</th>
+                  </tr>
+                </thead>
+                <tbody id="time-rows"></tbody>
+              </table>
+            </div>
+          </details>
+        </div>
+
+        <div class="card chart-card" id="period" hidden>
+          <div class="card-head card-head-row">
+            <div>
+              <h3>Before and after</h3>
+              <p class="card-sub">Each problem's share of tickets on either side of a date.</p>
+            </div>
+            <div class="field inline-field">
+              <label for="cutoff">Compare before and after</label>
+              <input type="date" id="cutoff">
+            </div>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span class="legend-item"><span class="legend-dot before"></span>Before</span>
+            <span class="legend-item"><span class="legend-dot after"></span>After</span>
+          </div>
+          <ul class="dumbbells" id="period-chart"></ul>
           <p class="note" id="period-note"></p>
-          <div class="table-scroll">
-            <table class="period-table" aria-label="Share of tickets for each problem, before and after the date">
-              <thead>
-                <tr>
-                  <th scope="col">Problem</th>
-                  <th scope="col" class="number">Before</th>
-                  <th scope="col" class="number">After</th>
-                  <th scope="col">Change</th>
-                </tr>
-              </thead>
-              <tbody id="period-rows"></tbody>
-            </table>
-          </div>
+          <details class="numbers">
+            <summary>Show as a table</summary>
+            <div class="table-scroll">
+              <table class="data-table" aria-label="Share of tickets for each problem, before and after the date">
+                <thead>
+                  <tr>
+                    <th scope="col">Problem</th>
+                    <th scope="col" class="number">Before</th>
+                    <th scope="col" class="number">After</th>
+                    <th scope="col">Change</th>
+                  </tr>
+                </thead>
+                <tbody id="period-rows"></tbody>
+              </table>
+            </div>
+          </details>
         </div>
       </div>
     </section>
 
     <section class="step" id="step-check" aria-labelledby="step-check-title">
-      <h2 id="step-check-title"><span class="step-number">Step 3</span> Check and fix the sorting</h2>
-      <p class="empty" id="check-empty">Load tickets to check them here.</p>
-      <div id="check" hidden>
+      <header class="step-header">
+        <span class="step-badge" aria-hidden="true">3</span>
+        <div>
+          <h2 id="step-check-title"><span class="visually-hidden">Step 3: </span>Check and fix the sorting</h2>
+          <p class="step-sub">See why each ticket landed where it did, and move any that are wrong.</p>
+        </div>
+      </header>
+
+      <p class="empty-state" id="check-empty">Load tickets to check them here.</p>
+
+      <div class="card" id="check" hidden>
         <p class="agreement" id="agreement" hidden></p>
-        <div class="check-tools">
+        <div class="toolbar">
           <div class="field">
             <label for="problem-filter">Show</label>
             <select id="problem-filter"></select>
@@ -95,30 +227,34 @@
             <label for="ticket-search">Search the ticket text</label>
             <input type="search" id="ticket-search">
           </div>
-        </div>
-        <p class="note" id="table-count" role="status"></p>
-        <table class="ticket-table" aria-label="Tickets with their problem and flags">
-          <thead>
-            <tr>
-              <th scope="col">Ticket</th>
-              <th scope="col">Problem</th>
-              <th scope="col">Flags</th>
-            </tr>
-          </thead>
-          <tbody id="ticket-rows"></tbody>
-        </table>
-        <div class="table-actions">
-          <button type="button" class="secondary" id="show-more" hidden>Show more</button>
-          <button type="button" id="download-csv">Download sorted CSV</button>
+          <button type="button" class="button primary toolbar-button" id="download-csv">Download sorted CSV</button>
         </div>
         <p class="status error" id="download-error" role="alert"></p>
+        <p class="note" id="table-count" role="status"></p>
+        <div class="ticket-table-wrap">
+          <table class="ticket-table" aria-label="Tickets with their problem and flags">
+            <thead>
+              <tr>
+                <th scope="col">Ticket</th>
+                <th scope="col">Problem</th>
+                <th scope="col">Flags</th>
+              </tr>
+            </thead>
+            <tbody id="ticket-rows"></tbody>
+          </table>
+        </div>
+        <div class="table-actions">
+          <button type="button" class="button secondary" id="show-more" hidden>Show more</button>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="page-footer">
-    <p>Built by Tanmay Pathak as a demo. Sample data is public reviews, summarized.</p>
-    <p><a href="https://github.com/Tanmaypathak18/ticket-sorter">See the code on GitHub</a></p>
+    <div class="footer-inner">
+      <p>Built by Tanmay Pathak as a demo. Sample data is public reviews, summarized.</p>
+      <p><a href="https://github.com/Tanmaypathak18/ticket-sorter">See the code on GitHub</a></p>
+    </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
